@@ -5,6 +5,7 @@ namespace Gene\EncryptionKeyManager\Plugin;
 use Psr\Log\LoggerInterface;
 use Magento\Framework\Encryption\Encryptor;
 use Magento\Framework\App\DeploymentConfig;
+use Magento\Framework\App\Filesystem\DirectoryList;
 use Gene\EncryptionKeyManager\Model\EncodingHelper;
 
 class LogDecrypts
@@ -22,6 +23,8 @@ class LogDecrypts
      * @param Encryptor $encryptor
      * @param DeploymentConfig $deploymentConfig
      * @param LoggerInterface $logger
+     * @param EncodingHelper $encodingHelper
+     * @param DirectoryList $directoryList
      * @throws \Magento\Framework\Exception\FileSystemException
      * @throws \Magento\Framework\Exception\RuntimeException
      */
@@ -29,7 +32,8 @@ class LogDecrypts
         Encryptor $encryptor,
         DeploymentConfig $deploymentConfig,
         private readonly LoggerInterface $logger,
-        private readonly EncodingHelper $encodingHelper
+        private readonly EncodingHelper $encodingHelper,
+        private readonly DirectoryList $directoryList
     ) {
         $this->keyCount = count(explode(PHP_EOL, $encryptor->exportKeys())) - 1;
 
@@ -82,7 +86,7 @@ class LogDecrypts
                 unset($trace['args']);
                 $traceIdentifier[] = implode($trace);
             }
-            $traceIdentifier = md5(implode($traceIdentifier));
+            $traceIdentifier = hash('md5', implode($traceIdentifier));
 
             /**
              * This is a bit odd looking but it puts the entire trace in one line, many log management systems do not
@@ -90,10 +94,9 @@ class LogDecrypts
              *
              * Make the log entry single pipe separated line
              * Remove full path from trace for easier reading
-             * BP defined at app/autoload.php
              */
             $traceString = str_replace(PHP_EOL, '|', $exception->getTraceAsString());
-            $traceString = '|' . str_replace(BP . '/', '', $traceString);
+            $traceString = '|' . str_replace($this->directoryList->getRoot() . '/', '', $traceString);
 
             $this->logger->info(
                 'gene encryption manager - legacy decryption',

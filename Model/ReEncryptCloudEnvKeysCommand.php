@@ -8,6 +8,7 @@ use Magento\Config\Model\Placeholder\PlaceholderFactory;
 use Magento\Config\Model\Placeholder\PlaceholderInterface;
 use Magento\Framework\Encryption\EncryptorInterface;
 use Magento\Framework\Exception\LocalizedException;
+use Magento\Framework\HTTP\PhpEnvironment\RequestFactory;
 
 class ReEncryptCloudEnvKeysCommand
 {
@@ -22,12 +23,14 @@ class ReEncryptCloudEnvKeysCommand
      * @param EncryptorInterface $encryptor
      * @param EncodingHelper $helper
      * @param PlaceholderFactory $placeholderFactory
+     * @param RequestFactory $requestFactory
      * @throws LocalizedException
      */
     public function __construct(
         private readonly EncryptorInterface $encryptor,
         private readonly EncodingHelper $helper,
         PlaceholderFactory $placeholderFactory,
+        private readonly RequestFactory $requestFactory,
     ) {
         $this->placeholder = $placeholderFactory->create(PlaceholderFactory::TYPE_ENVIRONMENT);
     }
@@ -42,10 +45,7 @@ class ReEncryptCloudEnvKeysCommand
     public function execute(?array $environmentVariables = null): array
     {
         if ($environmentVariables === null) {
-            if (!isset($_ENV)) {
-                throw new \Exception("No environment variables defined");
-            }
-            $environmentVariables = $_ENV;
+            $environmentVariables = $this->requestFactory->create()->getEnv()->toArray();
         }
 
         $config = [];
